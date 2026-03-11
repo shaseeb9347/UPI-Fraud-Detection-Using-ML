@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UPI Fraud Detection</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg"></div>
+
+<!-- NAVIGATION BAR -->
+<nav class="nav-bar">
+    <div class="nav-buttons">
+        <button class="nav-btn" onclick="showSection('home')">🏠 Home</button>
+        <button class="nav-btn" onclick="showSection('check')">🔍 Check</button>
+        <button class="nav-btn" onclick="showSection('dashboard')">📊 Dashboard</button>
+        <button class="nav-btn" onclick="showSection('login')">👤 Login</button>
+    </div>
+</nav>
+
+
+
+<!-- HOME SECTION -->
+<section id="homeSection" class="page-section">
+    <div class="section-container">
+        <h1 class="main-title">SecurePay AI</h1>
+        <p class="subtitle">UPI Fraud Detection System</p>
+        <p class="tagline">AI-driven security for digital payments</p>
+        
+        <div class="cyber-status">
+            🛡 SecurePay AI Protection Active • Real-Time UPI Fraud Monitoring Enabled
+        </div>
+
+        <!-- How It Works Section -->
+        <div class="info-box">
+            <h3>🧠 How SecurePay AI Works</h3>
+            <p>
+                SecurePay AI analyses UPI transaction behaviour using machine learning.
+                The system evaluates transaction time, amount patterns and historical data
+                to detect potential fraud risks in real time.
+            </p>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features">
+            <div class="feature-card">🔐<br>AI Fraud Detection</div>
+            <div class="feature-card">⚡<br>Real-Time Analysis</div>
+            <div class="feature-card">📊<br>Risk Dashboard</div>
+            <div class="feature-card">🧾<br>Explainable AI</div>
+        </div>
+
+        <!-- Welcome Info -->
+        <div class="welcome-box">
+            <h2>Welcome to SecurePay AI</h2>
+            <p>
+                SecurePay AI is an intelligent UPI fraud detection platform designed
+                to analyse transaction behaviour using machine learning and explainable AI.
+            </p>
+            <ul class="feature-list">
+                <li>🧠 AI Powered Fraud Detection</li>
+                <li>⚡ Real-time Risk Analysis</li>
+                <li>📊 Transaction Monitoring Dashboard</li>
+                <li>🔐 Cybersecurity Inspired Interface</li>
+            </ul>
+            
+            <!-- Quick action buttons -->
+            <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+                <button class="submit-btn" style="width: auto; padding: 12px 30px;" onclick="showSection('check')">
+                    Start Fraud Check 🚀
+                </button>
+                <button class="submit-btn" style="width: auto; padding: 12px 30px;" onclick="showSection('dashboard')">
+                    View Dashboard 📊
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- LOGIN SECTION -->
+<section id="loginSection" class="page-section hidden">
+    <div class="section-container">
+        <h1 class="section-title">User Login</h1>
+        <div class="form-wrapper">
+            <form id="loginForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" placeholder="Enter username" required>
+                </div>
+                <button type="button" class="submit-btn" onclick="doLogin();">Login</button>
+            </form>
+        </div>
+        <div id="loginHistory" class="table-container" style="margin-top:30px;">
+            <h2>Login History</h2>
+            <div class="transaction-list" id="loginList">
+                <div class="empty-state">
+                    <p>⏳ No login records</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CHECK TRANSACTION SECTION -->
+<section id="checkSection" class="page-section hidden">
+    <div class="section-container">
+        <h1 class="section-title">Check Transaction Fraud Risk</h1>
+        
+        <div class="form-wrapper">
+           <form id="inputForm" class="transaction-form" onsubmit="return false;">
+
+    <div class="form-grid">
+
+        <div class="form-group">
+            <label>User ID</label>
+            <input type="text" id="user_id" placeholder="User ID" required>
+        </div>
+
+        <div class="form-group">
+            <label>Transaction Amount (₹)</label>
+            <input type="number" id="amount" placeholder="Enter amount" step="0.01" required>
+        </div>
+
+        <div class="form-group">
+            <label>Device Used</label>
+            <select id="device" required>
+                <option value="">-- Select Device --</option>
+                <option value="Mobile">Mobile</option>
+                <option value="Desktop">Desktop</option>
+                <option value="Tablet">Tablet</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="location" placeholder="City or Region" required>
+        </div>
+
+        <div class="form-group">
+            <label>Transaction Type</label>
+            <select id="transaction_type" required>
+                <option value="">-- Select Type --</option>
+                <option value="Transfer">Transfer</option>
+                <option value="Payment">Payment</option>
+                <option value="Withdrawal">Withdrawal</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Payment Method</label>
+            <select id="payment_method" required>
+                <option value="">-- Select Method --</option>
+                <option value="UPI">UPI</option>
+                <option value="Debit Card">Debit Card</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Net Banking">Net Banking</option>
+            </select>
+        </div>
+
+    </div>
+
+    <button type="button" id="submitBtn" class="submit-btn" onclick="checkFraud(); return false;">
+        ✓ Check Fraud Risk
+    </button>
+
+</form>
+        </div>
+
+        <!-- Result Card -->
+        <div id="result" class="result-card hidden">
+            <div id="riskBadge" class="risk-badge"></div>
+
+            <div class="score-container">
+                <div class="risk-meter">
+                    <div id="riskBar"></div>
+                </div>
+                <div class="score">
+                    <span id="riskScore">0</span><span>%</span>
+                </div>
+            </div>
+
+            <div id="riskLevel" class="risk-level"></div>
+            <div id="alertMsg" class="alert-msg"></div>
+            
+            <div id="fraudPopup" class="fraud-popup hidden">
+                🚨 High Risk Fraud Detected!
+            </div>
+
+            <h3 class="reason-title">Fraud Detection Reasoning</h3>
+            <ul id="reasonList" class="reason-list"></ul>
+        </div>
+    </div>
+</section>
+
+<!-- SECURITY INFO -->
+<section class="security-section">
+    <div class="security-box">
+        <h3>🛡️ UPI Fraud Protection</h3>
+        <p>
+            This system helps identify suspicious transactions by analysing behavioural patterns.
+            It provides transparent reasoning and maintains transaction history to improve
+            monitoring and trust.
+        </p>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+    © 2026 SecurePay AI — UPI Fraud Detection Mini Project
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transaction Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .dashboard-wrapper {
+            background: #0b0f1a;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #00ffc6;
+        }
+
+        .dashboard-header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            text-shadow: 0 0 20px rgba(0, 255, 198, 0.5);
+        }
+
+        .dashboard-header p {
+            color: #b0bec5;
+            font-size: 1.1rem;
+            margin: 10px 0 0 0;
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            max-width: 1200px;
+            margin: 0 auto 40px;
+        }
+
+        .stat-card {
+            background: rgba(0, 255, 198, 0.1);
+            border: 2px solid rgba(0, 255, 198, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #b0bec5;
+            font-size: 0.9rem;
+            margin: 0 0 10px 0;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            color: #00ffc6;
+            font-weight: 800;
+        }
+
+        .table-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 198, 0.2);
+        }
+
+        .table-container h2 {
+            color: #00ffc6;
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .transaction-item {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 255, 198, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .transaction-item:hover {
+            background: rgba(0, 255, 198, 0.05);
+            border-color: rgba(0, 255, 198, 0.5);
+        }
+
+        .tx-field {
+            color: #e0f2f1;
+        }
+
+        .tx-label {
+            color: #b0bec5;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+
+        .risk-field {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .risk-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .risk-indicator.low {
+            background: #00e676;
+            box-shadow: 0 0 8px rgba(0, 230, 118, 0.6);
+        }
+
+        .risk-indicator.medium {
+            background: #ffca28;
+            box-shadow: 0 0 8px rgba(255, 202, 40, 0.6);
+        }
+
+        .risk-indicator.high {
+            background: #ff5252;
+            box-shadow: 0 0 8px rgba(255, 82, 82, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .risk-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .low {
+            background: rgba(0, 230, 118, 0.2);
+            color: #00e676;
+            border: 1px solid #00e676;
+        }
+
+        .medium {
+            background: rgba(255, 202, 40, 0.2);
+            color: #ffca28;
+            border: 1px solid #ffca28;
+        }
+
+        .high {
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+            border: 1px solid #ff5252;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #b0bec5;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin: 20px auto;
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #00ffcc 0%, #00ccff 100%);
+            color: #000;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 198, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .transaction-item {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body class="dashboard-wrapper">
+
+    <div class="dashboard-header">
+        <h1>📊 Transaction Dashboard</h1>
+        <p>Real-time fraud detection records</p>
+    </div>
+
+    <div style="text-align:center; margin-bottom:20px;">
+        <button id="simulateBtn" class="submit-btn" style="padding:8px 20px;">Run Simulation</button>
+    </div>
+    <!-- Stats Section -->
+    <div class="stats-section" id="statsSection">
+        <div class="stat-card">
+            <h3>Total Transactions</h3>
+            <div class="number" id="totalCount">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Low Risk</h3>
+            <div class="number" id="lowCount">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Medium Risk</h3>
+            <div class="number" id="mediumCount">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>High Risk</h3>
+            <div class="number" id="highCount">0</div>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div style="max-width:1200px; margin:0 auto 40px;">
+        <canvas id="pieChart" width="400" height="200"></canvas>
+        <canvas id="barChart" width="400" height="200" style="margin-top:20px;"></canvas>
+        <canvas id="lineChart" width="800" height="200" style="margin-top:20px;"></canvas>
+    </div>
+
+    <!-- Transaction List -->
+    <div class="table-container">
+        <h2>Transaction History</h2>
+        <div class="transaction-list" id="transactionList">
+            <div class="empty-state">
+                <p>⏳ Loading transactions...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login History Section -->
+    <div class="table-container" style="max-width:1200px; margin: 40px auto;">
+        <h2>User Login History</h2>
+        <div class="transaction-list" id="loginHistoryList">
+            <div class="empty-state">
+                <p>⏳ Loading login records...</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="index.html" class="back-btn">← Back to Fraud Detection</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
