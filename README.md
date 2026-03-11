@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # UPI Fraud Detection System
 
 A comprehensive real-time UPI (Unified Payments Interface) fraud detection system built with a Flask backend and an interactive HTML/CSS/JavaScript frontend. The system detects fraudulent transactions using a two-tier approach: exact historical matching against transaction data and machine learning model inference with intelligent risk scoring.
@@ -932,3 +933,6 @@ This project is provided for educational and development purposes. Use and modif
 **Last Updated**: February 25, 2026
 **Version**: 1.0 (Production Ready)
 **Status**: Fully Functional
+=======
+# UPI-Fraud-Detection-Using-ML
+>>>>>>> a02d9d78b1cf87ceef9ddb797a7b25b04dfbc2ea
