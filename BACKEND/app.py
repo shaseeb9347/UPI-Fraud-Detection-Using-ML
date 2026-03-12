@@ -108,17 +108,19 @@ def predict():
     conn.execute(
         """
         INSERT INTO transactions
-        (timestamp, user_id, amount, device, location, payment_method, fraud_prediction)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (timestamp, user_id, transaction_amount, transaction_type, device_used, location, payment_method, fraud_risk_score, risk_level)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             data.get("User_ID", "N/A"),
             data.get("Transaction_Amount", 0),
+            data.get("Transaction_Type", "Transfer"),
             data.get("Device", "N/A"),
             data.get("Location", "N/A"),
             data.get("Payment_Method", "N/A"),
-            final_pred
+            risk_score,
+            risk_level
         )
     )
 
@@ -152,11 +154,13 @@ def get_transactions():
         results.append({
             "timestamp": r[1],
             "user_id": r[2],
-            "amount": r[3],
-            "device": r[4],
-            "location": r[5],
-            "payment_method": r[6],
-            "fraud_prediction": r[7]
+            "transaction_amount": r[3],
+            "transaction_type": r[4],
+            "device_used": r[5],
+            "location": r[6],
+            "payment_method": r[7],
+            "fraud_risk_score": r[8],
+            "risk_level": r[9]
         })
 
     return jsonify({"transactions": results})
@@ -168,6 +172,108 @@ def get_transactions():
 @app.route("/")
 def home():
     return "UPI Fraud Detection Backend Running"
+
+
+# -------------------------------------------------
+# LOGIN ENDPOINT
+# -------------------------------------------------
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json(force=True)
+    username = data.get("username", "")
+    
+    if not username:
+        return jsonify({"error": "Username required"}), 400
+    
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO user_logins (username, login_time) VALUES (?, ?)",
+        (username, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    )
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Login recorded", "username": username})
+
+
+# -------------------------------------------------
+# GET LOGIN HISTORY
+# -------------------------------------------------
+@app.route("/logins", methods=["GET"])
+def get_logins():
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT username, login_time FROM user_logins ORDER BY login_time DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    
+    logins = [{"username": r[0], "login_time": r[1]} for r in rows]
+    
+    return jsonify({"logins": logins})
+
+
+# -------------------------------------------------
+# SIMULATION ENDPOINT (test data generation)
+# -------------------------------------------------
+@app.route("/simulate", methods=["POST"])
+def simulate():
+    import random
+    
+    conn = get_db()
+    
+    # Generate 3 random test transactions
+    for _ in range(3):
+        risk = random.choice(["LOW", "MEDIUM", "HIGH"])
+        score = random.choice([15, 45, 85]) if risk == "LOW" else (random.choice([35, 55]) if risk == "MEDIUM" else 95)
+        
+        conn.execute(
+            """
+            INSERT INTO transactions
+            (timestamp, user_id, transaction_amount, transaction_type, device_used, location, payment_method, fraud_risk_score, risk_level)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                f"UPI{random.randint(1000, 9999)}",
+                random.randint(1000, 50000),
+                "Transfer",
+                random.choice(["Mobile", "Web", "Desktop"]),
+                random.choice(["Delhi", "Mumbai", "Bangalore", "Hyderabad"]),
+                "UPI",
+                score,
+                risk
+            )
+        )
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Simulation data generated"})
+
+
+# -------------------------------------------------
+# GET STATISTICS
+# -------------------------------------------------
+@app.route("/stats", methods=["GET"])
+def get_stats():
+    conn = get_db()
+    
+    total_result = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()
+    total_transactions = total_result[0] if total_result else 0
+    
+    fraud_result = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level = 'HIGH'").fetchone()
+    fraud_transactions = fraud_result[0] if fraud_result else 0
+    
+    safe_result = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level = 'LOW'").fetchone()
+    safe_transactions = safe_result[0] if safe_result else 0
+    
+    conn.close()
+    
+    return jsonify({
+        "total_transactions": total_transactions,
+        "fraud_transactions": fraud_transactions,
+        "safe_transactions": safe_transactions
+    })
 
 
 # -------------------------------------------------
