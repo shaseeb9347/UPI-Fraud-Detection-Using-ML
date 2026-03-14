@@ -1,5 +1,6 @@
 import pandas as pd
 import pickle
+import os
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -9,7 +10,9 @@ from sklearn.impute import SimpleImputer
 # -------------------------------
 # Load dataset
 # -------------------------------
-data = pd.read_csv("../data/fraud_dataset.csv")
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+csv_path = os.path.join(base_dir, "data", "fraud_dataset.csv")
+data = pd.read_csv(csv_path)
 
 # Drop unnecessary columns
 data = data.drop("Transaction_ID", axis=1)

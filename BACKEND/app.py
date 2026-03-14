@@ -6,119 +6,173 @@ import pandas as pd
 import sqlite3
 from flask_cors import CORS
 
+# -------------------------------------------------
+# APP CONFIG
+# -------------------------------------------------
+
 app = Flask(__name__)
 CORS(app)
 
-# ensure database is initialized at import time (useful for tests and
-# anything that imports the app module directly)
-if not os.path.exists("transactions.db"):
-    try:
-        import create_db  # creates tables if needed
-    except Exception:
-        pass
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+DATASET_PATH = os.path.join(base_dir, "data", "fraud_dataset.csv")
+MODEL_DIR = os.path.join(base_dir, "model")
 
 # -------------------------------------------------
 # LOAD MODELS
 # -------------------------------------------------
-base_dir = os.path.dirname(os.path.abspath(__file__))
-model_dir = os.path.join(base_dir, "model")
 
-logistic_model = pickle.load(open(os.path.join(model_dir, "logistic_model.pkl"), "rb"))
-rf_model = pickle.load(open(os.path.join(model_dir, "random_forest_model.pkl"), "rb"))
-scaler = pickle.load(open(os.path.join(model_dir, "scaler.pkl"), "rb"))
-encoders = pickle.load(open(os.path.join(model_dir, "encoders.pkl"), "rb"))
+logistic_model = pickle.load(open(os.path.join(MODEL_DIR, "logistic_model.pkl"), "rb"))
+rf_model = pickle.load(open(os.path.join(MODEL_DIR, "random_forest_model.pkl"), "rb"))
+scaler = pickle.load(open(os.path.join(MODEL_DIR, "scaler.pkl"), "rb"))
+encoders = pickle.load(open(os.path.join(MODEL_DIR, "encoders.pkl"), "rb"))
 
 # -------------------------------------------------
 # DATABASE CONNECTION
 # -------------------------------------------------
+
 def get_db():
     return sqlite3.connect("transactions.db")
 
 
 # -------------------------------------------------
+# HOME ROUTE
+# -------------------------------------------------
+
+@app.route("/")
+def home():
+    return "UPI Fraud Detection Backend Running"
+
+
+# -------------------------------------------------
 # PREDICT ROUTE
 # -------------------------------------------------
+
 @app.route("/predict", methods=["POST"])
 def predict():
 
     data = request.get_json(force=True)
 
-    # Map frontend fields to training data columns
-    # User_ID in training data is numeric; try to coerce, fall back to 0
-    uid_raw = data.get("User_ID", 0)
+    user_id = data.get("User_ID")
+    amount = float(data.get("Transaction_Amount", 0))
+    device = data.get("Device", "Mobile")
+    location = data.get("Location", "Unknown")
+    transaction_type = data.get("Transaction_Type", "Transfer")
+    payment_method = data.get("Payment_Method", "UPI")
+    hour = datetime.now().hour
+
+    fraud_pred = 0
+    risk_level = "LOW"
+    risk_score = 10
+    source = "ML_MODEL"
+
+    # -------------------------------
+    # STEP 1 : CHECK CSV DATASET
+    # -------------------------------
     try:
-        uid_val = int(uid_raw)
-    except Exception:
-        uid_val = 0
-    input_df = pd.DataFrame([{
-        "User_ID": uid_val,
-        "Transaction_Amount": float(data.get("Transaction_Amount", 0)),
-        "Transaction_Type": "Transfer",  # default
-        "Time_of_Transaction": 12.0,  # default time
-        "Device_Used": data.get("Device", "Mobile"),
-        "Location": data.get("Location", "Unknown"),
-        "Previous_Fraudulent_Transactions": 0,  # default
-        "Account_Age": 30,  # default
-        "Number_of_Transactions_Last_24H": 5,  # default
-        "Payment_Method": data.get("Payment_Method", "UPI")
-    }])
 
-    # Fill any missing values
-    input_df = input_df.fillna(0)
+        df = pd.read_csv(DATASET_PATH)
 
-    # Encode categorical variables using trained encoders
-    categorical_cols = ['Transaction_Type', 'Device_Used', 'Location', 'Payment_Method']
-    for col in encoders:
-        val = input_df[col].iloc[0]
+        match = df[df["User_ID"].astype(str) == str(user_id)]
 
-        if val not in encoders[col].classes_:
-            val = encoders[col].classes_[0]
+        if not match.empty:
 
-        input_df[col] = encoders[col].transform([val])
+            fraud_label = int(match.iloc[0]["Fraudulent"])
 
-    # Select features in the same order as training data
-    feature_cols = ["User_ID", "Transaction_Amount", "Transaction_Type", "Time_of_Transaction", 
-                   "Device_Used", "Location", "Previous_Fraudulent_Transactions", "Account_Age", 
-                   "Number_of_Transactions_Last_24H", "Payment_Method"]
-    
-    input_data = input_df[feature_cols]
+            fraud_pred = fraud_label
+            source = "CSV_DATASET"
 
-    # Scale for logistic regression
-    scaled_input = scaler.transform(input_data)
+            if fraud_label == 1:
+                risk_level = "HIGH"
+                risk_score = 95
+            else:
+                risk_level = "LOW"
+                risk_score = 10
 
-    # Make predictions
-    log_pred = logistic_model.predict(scaled_input)[0]
-    rf_pred = rf_model.predict(input_data)[0]
+    except Exception as e:
+        print("CSV lookup error:", e)
 
-    # Majority voting
-    final_pred = int((log_pred + rf_pred) >= 1)
+    # -------------------------------
+    # STEP 2 : ML PREDICTION
+    # -------------------------------
+    if source != "CSV_DATASET":
 
-    if final_pred == 1:
-        risk_level = "HIGH"
-        risk_score = 95
-    else:
-        risk_level = "LOW"
-        risk_score = 15
+        input_df = pd.DataFrame([{
+            "User_ID": 0,
+            "Transaction_Amount": amount,
+            "Transaction_Type": transaction_type,
+            "Time_of_Transaction": hour,
+            "Device_Used": device,
+            "Location": location,
+            "Previous_Fraudulent_Transactions": 0,
+            "Account_Age": 30,
+            "Number_of_Transactions_Last_24H": 3,
+            "Payment_Method": payment_method
+        }])
 
-    # -------------------------------------------------
+        for col in encoders:
+
+            val = input_df[col].iloc[0]
+
+            if val not in encoders[col].classes_:
+                val = encoders[col].classes_[0]
+
+            input_df[col] = encoders[col].transform([val])
+
+        feature_cols = [
+            "User_ID",
+            "Transaction_Amount",
+            "Transaction_Type",
+            "Time_of_Transaction",
+            "Device_Used",
+            "Location",
+            "Previous_Fraudulent_Transactions",
+            "Account_Age",
+            "Number_of_Transactions_Last_24H",
+            "Payment_Method"
+        ]
+
+        X = input_df[feature_cols]
+
+        scaled = scaler.transform(X)
+
+        log_prob = logistic_model.predict_proba(scaled)[0][1]
+        rf_prob = rf_model.predict_proba(X)[0][1]
+
+        avg_prob = (log_prob + rf_prob) / 2
+
+        risk_score = int(avg_prob * 100)
+
+        if avg_prob >= 0.7:
+            risk_level = "HIGH"
+        elif avg_prob >= 0.4:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+
+        fraud_pred = 1 if avg_prob >= 0.5 else 0
+
+    # -------------------------------
     # STORE TRANSACTION IN DATABASE
-    # -------------------------------------------------
+    # -------------------------------
+
     conn = get_db()
 
     conn.execute(
         """
         INSERT INTO transactions
-        (timestamp, user_id, transaction_amount, transaction_type, device_used, location, payment_method, fraud_risk_score, risk_level)
+        (timestamp, user_id, transaction_amount, transaction_type,
+        device_used, location, payment_method, fraud_risk_score, risk_level)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            data.get("User_ID", "N/A"),
-            data.get("Transaction_Amount", 0),
-            data.get("Transaction_Type", "Transfer"),
-            data.get("Device", "N/A"),
-            data.get("Location", "N/A"),
-            data.get("Payment_Method", "N/A"),
+            user_id,
+            amount,
+            transaction_type,
+            device,
+            location,
+            payment_method,
             risk_score,
             risk_level
         )
@@ -128,15 +182,17 @@ def predict():
     conn.close()
 
     return jsonify({
-        "fraud_prediction": final_pred,
+        "fraud_prediction": fraud_pred,
         "risk_level": risk_level,
-        "fraud_risk_score": risk_score
+        "fraud_risk_score": risk_score,
+        "source": source
     })
 
 
 # -------------------------------------------------
-# GET TRANSACTION HISTORY
+# TRANSACTION HISTORY
 # -------------------------------------------------
+
 @app.route("/transactions", methods=["GET"])
 def get_transactions():
 
@@ -167,118 +223,127 @@ def get_transactions():
 
 
 # -------------------------------------------------
-# HOME
+# LOGIN
 # -------------------------------------------------
-@app.route("/")
-def home():
-    return "UPI Fraud Detection Backend Running"
 
-
-# -------------------------------------------------
-# LOGIN ENDPOINT
-# -------------------------------------------------
 @app.route("/login", methods=["POST"])
 def login():
+
     data = request.get_json(force=True)
-    username = data.get("username", "")
-    
+    username = data.get("username")
+
     if not username:
         return jsonify({"error": "Username required"}), 400
-    
+
     conn = get_db()
+
     conn.execute(
         "INSERT INTO user_logins (username, login_time) VALUES (?, ?)",
         (username, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     )
+
     conn.commit()
     conn.close()
-    
-    return jsonify({"message": "Login recorded", "username": username})
+
+    return jsonify({"message": "Login recorded"})
 
 
 # -------------------------------------------------
-# GET LOGIN HISTORY
+# LOGIN HISTORY
 # -------------------------------------------------
+
 @app.route("/logins", methods=["GET"])
 def get_logins():
+
     conn = get_db()
+
     rows = conn.execute(
         "SELECT username, login_time FROM user_logins ORDER BY login_time DESC LIMIT 50"
     ).fetchall()
+
     conn.close()
-    
-    logins = [{"username": r[0], "login_time": r[1]} for r in rows]
-    
-    return jsonify({"logins": logins})
+
+    results = []
+
+    for r in rows:
+        results.append({
+            "username": r[0],
+            "login_time": r[1]
+        })
+
+    return jsonify({"logins": results})
 
 
 # -------------------------------------------------
-# SIMULATION ENDPOINT (test data generation)
+# SIMULATE TEST DATA
 # -------------------------------------------------
+
 @app.route("/simulate", methods=["POST"])
 def simulate():
+
     import random
-    
+
     conn = get_db()
-    
-    # Generate 3 random test transactions
+
     for _ in range(3):
+
         risk = random.choice(["LOW", "MEDIUM", "HIGH"])
-        score = random.choice([15, 45, 85]) if risk == "LOW" else (random.choice([35, 55]) if risk == "MEDIUM" else 95)
-        
+        score = random.choice([10, 50, 90])
+
         conn.execute(
             """
             INSERT INTO transactions
-            (timestamp, user_id, transaction_amount, transaction_type, device_used, location, payment_method, fraud_risk_score, risk_level)
+            (timestamp, user_id, transaction_amount, transaction_type,
+            device_used, location, payment_method, fraud_risk_score, risk_level)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                f"UPI{random.randint(1000, 9999)}",
-                random.randint(1000, 50000),
+                f"UPI{random.randint(1000,9999)}",
+                random.randint(1000,50000),
                 "Transfer",
-                random.choice(["Mobile", "Web", "Desktop"]),
-                random.choice(["Delhi", "Mumbai", "Bangalore", "Hyderabad"]),
+                random.choice(["Mobile","Desktop"]),
+                random.choice(["Delhi","Mumbai","Hyderabad"]),
                 "UPI",
                 score,
                 risk
             )
         )
-    
+
     conn.commit()
     conn.close()
-    
-    return jsonify({"message": "Simulation data generated"})
+
+    return jsonify({"message":"Simulation data generated"})
 
 
 # -------------------------------------------------
-# GET STATISTICS
+# STATS
 # -------------------------------------------------
+
 @app.route("/stats", methods=["GET"])
 def get_stats():
+
     conn = get_db()
-    
-    total_result = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()
-    total_transactions = total_result[0] if total_result else 0
-    
-    fraud_result = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level = 'HIGH'").fetchone()
-    fraud_transactions = fraud_result[0] if fraud_result else 0
-    
-    safe_result = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level = 'LOW'").fetchone()
-    safe_transactions = safe_result[0] if safe_result else 0
-    
+
+    total = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
+    low = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level='LOW'").fetchone()[0]
+    medium = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level='MEDIUM'").fetchone()[0]
+    high = conn.execute("SELECT COUNT(*) FROM transactions WHERE risk_level='HIGH'").fetchone()[0]
+
     conn.close()
-    
+
     return jsonify({
-        "total_transactions": total_transactions,
-        "fraud_transactions": fraud_transactions,
-        "safe_transactions": safe_transactions
+        "total": total,
+        "low": low,
+        "medium": medium,
+        "high": high
     })
 
 
 # -------------------------------------------------
 # RUN SERVER
 # -------------------------------------------------
+
 if __name__ == "__main__":
     print("Starting UPI Fraud Detection Backend...")
     app.run(debug=True, port=5001)

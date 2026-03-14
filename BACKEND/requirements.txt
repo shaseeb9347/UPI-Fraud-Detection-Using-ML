@@ -6,3 +6,6 @@ numpy
 joblib
 python-dotenv
 pytest
+streamlit
+plotly
+requests

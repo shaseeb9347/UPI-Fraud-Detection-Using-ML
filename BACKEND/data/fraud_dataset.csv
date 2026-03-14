@@ -48,7 +48,7 @@ T46,3747,4376.93,ATM Withdrawal,20.0,Mobile,New York,1,94,7,Net Banking,0
 T47,1975,4972.42,Online Purchase,13.0,Tablet,Houston,1,93,14,Credit Card,0
 T48,2806,2592.43,Online Purchase,13.0,Tablet,New York,1,119,14,Net Banking,0
 T49,1189,470.84,POS Payment,,Tablet,New York,1,70,3,Net Banking,0
-T50,4005,,ATM Withdrawal,4.0,Mobile,Boston,3,10,7,Debit Card,0
+T50,4005,1000,ATM Withdrawal,4.0,Mobile,Boston,3,10,7,Debit Card,0
 T51,3734,1621.47,Bill Payment,17.0,Desktop,Los Angeles,4,108,5,Debit Card,0
 T52,4005,522.25,Online Purchase,8.0,Mobile,Miami,0,1,1,Net Banking,0
 T53,1562,4077.63,Online Purchase,18.0,Desktop,Houston,1,85,12,Debit Card,0
